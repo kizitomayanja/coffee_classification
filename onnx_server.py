@@ -18,7 +18,7 @@ session = rt.InferenceSession(MODEL_PATH)
 @app.route("/", methods=["GET"])
 def home():
     context = jsonify({"message": "ONNX Model API is running!"})
-    return render_template("home.html")
+    return render_template("test.html")
 
 @app.route("/predict", methods=["POST"])
 def predict():

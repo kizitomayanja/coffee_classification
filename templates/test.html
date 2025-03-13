@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Classify</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <nav class="bg-brown-700 text-green p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Coffee Classify</h1>
+            <ul class="flex space-x-4">
+                <li><a href="#" class="hover:underline">Home</a></li>
+                <li><a href="#" class="hover:underline">About</a></li>
+                <li><a href="#" class="hover:underline">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="flex p-5 justify-center items-center flex-grow">
+        <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-md text-center">
+            <h2 class="text-2xl font-semibold mb-4">Upload Your Coffee Image</h2>
+            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="previewImage(event)">
+            <button onclick="document.getElementById('imageInput').click()" 
+                class="bg-blue-500 text-white px-4 py-2 rounded-lg mb-3 hover:bg-blue-600">Choose Image</button>
+            <button onclick="captureImage()" 
+                class="bg-green-500 text-white px-4 py-2 rounded-lg mb-3 hover:bg-green-600">Take Photo</button>
+            <video id="camera" class="w-full hidden" autoplay></video>
+            <canvas id="canvas" class="hidden"></canvas>
+            <img id="preview" class="w-full rounded-lg hidden mt-3" />
+            <button onclick="classifyImage()" id="classifyBtn" 
+                class="bg-purple-500 text-white px-4 py-2 rounded-lg mt-3 hover:bg-purple-600 hidden">Classify Image</button>
+            <p id="result" class="mt-4 text-lg font-semibold text-gray-700"></p>
+        </div>
+    </div>
+
+    <footer class="bg-brown-800 text-white p-4 text-center">
+        &copy; 2025 Coffee Classify | All rights reserved
+    </footer>
+
+    <script>
+        const API_URL = "http://localhost:5000/predict";
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('preview').classList.remove('hidden');
+                    document.getElementById('classifyBtn').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function captureImage() {
+            const video = document.getElementById('camera');
+            const canvas = document.getElementById('canvas');
+            
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.classList.add('hidden');
+                    document.getElementById('preview').src = canvas.toDataURL();
+                    document.getElementById('preview').classList.remove('hidden');
+                    document.getElementById('classifyBtn').classList.remove('hidden');
+                }, 2000);
+            });
+        }
+
+        async function classifyImage() {
+            const imgElement = document.getElementById('preview');
+            document.getElementById('result').textContent = "Classifying...";
+            
+            const response = await fetch(imgElement.src);
+            const blob = await response.blob();
+            const formData = new FormData();
+            formData.append("file", blob, "image.png");
+            
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                document.getElementById('result').textContent = `Class: ${data.class}, Confidence: ${data.confidence.toFixed(2)}`;
+            } catch (error) {
+                document.getElementById('result').textContent = "Error in classification";
+                console.error("Classification error:", error);
+            }
+        }
+    </script>
+</body>
+</html>
